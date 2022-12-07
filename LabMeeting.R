@@ -1,8 +1,9 @@
 library(tidyverse)
 
+# import data from csv file
 spp.sites <- read.csv("spp.sites.csv")
 
-## RALU DATA
+## pull out just the frog data and covariates we might want
 ralu.sites <- spp.sites %>%
   filter(species=="ralu") %>%
   select(site, date, community, julianday, species, tads, sals, tads, bubos, 
@@ -30,7 +31,7 @@ coef <- ralu.prev.best2$coefficients
 
 
 
-# predict values:
+# predict values (untransformed):
 pred.u <- coef['(Intercept)'] + 
   coef['ralu_density'] * ralu.sites$ralu_density +
   coef['permanent'] * ralu.sites$permanent + ### this is binary 1 or 0 # need example of non-binary - I code 3 levels as 1,2,3 - then use that to reference which value to use in a vector of values for that covariate
@@ -43,11 +44,14 @@ inv.logit <- function(x){
   exp(x)/(1+exp(x))
 }
 
+# now do the inverse logit transform to get correct scale
 pred <- inv.logit(pred.u)
 
 plot(pred, predict(ralu.prev.best2))
 plot(pred.u, predict(ralu.prev.best2)) ## Weird! The predict function doesn't back transform
 
+
+####################### Explore effect of beavers
 # Assume Beaver ponds are permanent and have canopy cover of 21 
 # & non-beaver ponds are not permanent and have canopy cover of 42
 
@@ -92,6 +96,7 @@ library(R2jags)
 library(MCMCvis)
 library(mcmcplots)
 
+############################## Specify Model in JAGS code to a text file
 sink("GLM_Raluprev.jags")
 cat("
 model {
@@ -123,10 +128,11 @@ for (i in 1:n){
 ",fill = TRUE)
 sink()
 
+############################## End specify model
 
 
 
-
+##### Now R code to run the model
 
 # Bundle data
 jags.data <- list(positive = ralu.sites$positive, 
@@ -164,9 +170,11 @@ out <- jags(data = jags.data, inits = inits, parameters.to.save = params,
             n.iter = ni, n.burnin = nb, working.directory = getwd())
 
 
-
+####### Make some plots
+# look at distributions, etc
 mcmcplot(out,parms=params[1:6])
 
+# plot of estimates
 MCMCplot(out,params=params[1:6])
 
 ## add the GLM points estimates
