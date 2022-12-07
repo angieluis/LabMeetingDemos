@@ -49,11 +49,16 @@ pred <- inv.logit(pred.u)
 
 plot(pred, predict(ralu.prev.best2))
 plot(pred.u, predict(ralu.prev.best2)) ## Weird! The predict function doesn't back transform
+ 
+# now that I know predict() doesn't back transform, redo R^2 calculation from before
+mod.cor <- cor.test(inv.logit(predict(ralu.prev.best2)), ralu.sites$prevalence)
+mod.cor$estimate^2  # R squared = 0.375, slightly better
 
 
 ####################### Explore effect of beavers
 # Assume Beaver ponds are permanent and have canopy cover of 21 
 # & non-beaver ponds are not permanent and have canopy cover of 42
+# (Would probably be better to half the permanent coeficient, because about half are permanent)
 
 # assume PC1 and PC2 values of 0 (sort of average)
 # explore the effect of ralu_density
@@ -121,8 +126,7 @@ for (i in 1:n){
 
    # Compare to data with random binomial errors  
    positive[i] ~ dbin(lambda[i], total[i])    #dbin wants prob first, then numb trails (unlike R's dbinom())
-  
-
+   
    } #i
 }
 ",fill = TRUE)
@@ -181,3 +185,64 @@ MCMCplot(out,params=params[1:6])
 points(coef[c(1:3,5,4)],6:2,col="red")
 points(coef[6]*100,1,col="red") # need to mult canopy cover back to 100
 
+
+
+
+
+
+
+##############################################################################
+## Now ask the Beaver question but based on the whole
+## posterior parameter distributions (instead of point estimates)
+##############################################################################
+
+# first just look at one mean density of frogs
+ralu1 <- mean(ralu.sites$ralu_density) #0.133461
+
+# full posteriors of all parameters (so 12000 values for each parameter)
+beta.0.post = out$BUGSoutput$sims.list$beta.0
+beta.ralu.post = out$BUGSoutput$sims.list$beta.ralu
+beta.permanent.post = out$BUGSoutput$sims.list$beta.permanent
+beta.PC1.post = out$BUGSoutput$sims.list$beta.PC1
+beta.PC2.post = out$BUGSoutput$sims.list$beta.PC2
+beta.canopy.post = out$BUGSoutput$sims.list$beta.canopy
+
+
+### Predict prevalence in beaver ponds at frog density of 0.2
+beav.pred.post <- beta.0.post + 
+  beta.ralu.post * ralu1 +
+  beta.permanent.post + 
+  #coef['PC2'] * ralu.sites$PC2 +  # assume average value of 0 
+  #coef['PC1'] * ralu.sites$PC1 +  # assume average value of 0 
+  beta.canopy.post * 0.21
+beav.pred.post <- inv.logit(beav.pred.post)
+mean(beav.pred.post)
+# 0.6707449
+
+### Predict prevalence in non-beaver ponds (assuming they are not permenant)
+nonbeav.pred.post <- beta.0.post + 
+  beta.ralu.post * ralu1 +
+  #coef['permanent']  +  # assume not permanent, so 0
+  #coef['PC2'] * ralu.sites$PC2 +  # assume average value of 0 
+  #coef['PC1'] * ralu.sites$PC1 +  # assume average value of 0 
+  beta.canopy.post * 0.42
+nonbeav.pred.post <- inv.logit(nonbeav.pred.post)
+mean(nonbeav.pred.post)
+# 0.6444863
+
+#################### Violin Plot for distribution comparison
+
+# put in one data frame for violin plot function
+ralu1comparison <- data.frame(prevalence=rbind(beav.pred.post, nonbeav.pred.post),
+                              type=c(rep("beaver", length(beav.pred.post)), 
+                              rep("nonbeaver", length(beav.pred.post))))
+#violin plot
+ggplot(ralu1comparison, aes(x=type, y= prevalence)) +
+ geom_violin() +
+  ggtitle("Comparison at mean frog density of 0.13") +
+  xlab("") +
+  ylab("Posterior Predicted Prevalence")
+  
+  
+  
+  
