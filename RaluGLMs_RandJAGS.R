@@ -208,7 +208,7 @@ beta.PC2.post = out$BUGSoutput$sims.list$beta.PC2
 beta.canopy.post = out$BUGSoutput$sims.list$beta.canopy
 
 
-### Predict prevalence in beaver ponds at frog density of 0.2
+### Predict prevalence in beaver ponds at mean frog density of 0.133
 beav.pred.post <- beta.0.post + 
   beta.ralu.post * ralu1 +
   beta.permanent.post + 
@@ -219,7 +219,7 @@ beav.pred.post <- inv.logit(beav.pred.post)
 mean(beav.pred.post)
 # 0.6707449
 
-### Predict prevalence in non-beaver ponds (assuming they are not permenant)
+### Predict prevalence in non-beaver ponds (assuming they are not permanent)
 nonbeav.pred.post <- beta.0.post + 
   beta.ralu.post * ralu1 +
   #coef['permanent']  +  # assume not permanent, so 0
@@ -229,6 +229,9 @@ nonbeav.pred.post <- beta.0.post +
 nonbeav.pred.post <- inv.logit(nonbeav.pred.post)
 mean(nonbeav.pred.post)
 # 0.6444863
+
+#### It would probably be a good idea to do 2 separate non-beaver distributions
+#### One for permanent and another for not permanent.
 
 #################### Violin Plot for distribution comparison
 
