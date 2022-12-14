@@ -108,7 +108,7 @@ model {
 
 # Priors
 beta.0 ~ dunif(-5, 5)
-beta.ralu ~ dunif(-5, 5)
+beta.ralu ~ dunif(-10, 10)
 beta.permanent ~ dunif(-5, 5)
 beta.PC1 ~ dunif(-5, 5)
 beta.PC2 ~ dunif(-5, 5)
@@ -163,9 +163,9 @@ inits <- function() list(beta.0 = runif(1, -5, 5),
 params <- c("beta.0","beta.ralu","beta.permanent","beta.PC1","beta.PC2","beta.canopy","lambda")
 
 # MCMC settings
-ni <- 10000
+ni <- 20000
 nt <- 2
-nb <- 2000
+nb <- 5000
 nc <- 3
 
 # Call JAGS from R
