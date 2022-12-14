@@ -83,13 +83,41 @@ nonbeav.pred1 <- coef['(Intercept)'] +
 
 nonbeav.pred <- inv.logit(nonbeav.pred1)
 
-plot(frog.density, beav.pred,type="l", col="steelblue",lwd=2, ylab="predicted prevalence")
+plot(frog.density, beav.pred,type="l", col="steelblue",lwd=2, ylab="predicted prevalence",ylim=c(0,1))
 lines(frog.density, nonbeav.pred, col="olivedrab", lwd=2)
 legend("bottomright", c("beaver", "non-beaver"), lwd=2, col=c("steelblue","olivedrab"),bty="n")
 
 
+#################### Add + - SE predictions
+
+beav.pred.high1 <- (coef['(Intercept)']+SE['(Intercept)']) + 
+  (coef['ralu_density']+SE['ralu_density']) * frog.density +
+  (coef['permanent']+SE['permanent'])  + 
+  (coef['canopy_cover']+SE['canopy_cover']) * 21
+beav.pred.high <- inv.logit(beav.pred.high1)
+
+beav.pred.low1 <- (coef['(Intercept)']-SE['(Intercept)']) + 
+  (coef['ralu_density']-SE['ralu_density']) * frog.density +
+  (coef['permanent']-SE['permanent'])  + 
+  (coef['canopy_cover']-SE['canopy_cover']) * 21
+beav.pred.low <- inv.logit(beav.pred.low1)
+
+nonbeav.pred.high1 <- (coef['(Intercept)']+SE['(Intercept)']) + 
+  (coef['ralu_density']+SE['ralu_density']) * frog.density +
+  (coef['canopy_cover']+SE['canopy_cover']) * 42
+nonbeav.pred.high <- inv.logit(nonbeav.pred.high1)
+
+nonbeav.pred.low1 <- (coef['(Intercept)']-SE['(Intercept)']) + 
+  (coef['ralu_density']-SE['ralu_density']) * frog.density +
+  (coef['canopy_cover']-SE['canopy_cover']) * 42
+nonbeav.pred.low <- inv.logit(nonbeav.pred.low1)
 
 
+
+lines(frog.density, beav.pred.high, lty=2, col="steelblue")
+lines(frog.density, beav.pred.low, lty=2, col="steelblue")
+lines(frog.density, nonbeav.pred.low, col="olivedrab",lty=2)
+lines(frog.density, nonbeav.pred.high, col="olivedrab",lty=2)
 
 
 
@@ -181,10 +209,18 @@ mcmcplot(out,parms=params[1:6])
 # plot of estimates
 MCMCplot(out,params=params[1:6])
 
-## add the GLM points estimates
-points(coef[c(1:3,5,4)],6:2,col="red")
-points(coef[6]*100,1,col="red") # need to mult canopy cover back to 100
+## add the GLM points estimates in red
+points(coef[c(1:3,5,4)],6:2,col="white",bg="red",pch=22)
+points(coef[6]*100,1,col="white",bg="red",pch=22) # need to mult canopy cover back to 100
 
+## Add GLM Confidence intervals which are 1.96*SE
+SE <- summary(ralu.prev.best2)$coefficients[,2]
+lines(c(coef[1]+1.96*SE[1],coef[1]-1.96*SE[1]),c(6,6),col="red",lwd=3)
+lines(c(coef[2]+1.96*SE[2],coef[2]-1.96*SE[2]),c(5,5),col="red",lwd=3)
+lines(c(coef[3]+1.96*SE[3],coef[3]-1.96*SE[3]),c(4,4),col="red",lwd=3)
+lines(c(coef[5]+1.96*SE[5],coef[5]-1.96*SE[5]),c(3,3),col="red",lwd=3)
+lines(c(coef[4]+1.96*SE[4],coef[4]-1.96*SE[4]),c(2,2),col="red",lwd=3)
+lines(c(coef[6]*100+1.96*SE[6]*100,coef[6]*100-1.96*SE[6]*100),c(1,1),col="red",lwd=3)
 
 
 
