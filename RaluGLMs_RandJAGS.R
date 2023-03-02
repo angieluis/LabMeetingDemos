@@ -89,10 +89,10 @@ ggplot(new.dat.ralu, aes(x = ralu_density, y = fit, color = permanent )) +
 
 
 # Again Explore marginal effects of ralu density and hydroperiod but with rug plots 
-# showing the distribution of the predictor data 
-# keep other variables constant. PCs=0 (mean values), canopy cover = 50%
+# showing the distribution of the predictor data. Use actual data for those
+# variables and keep other variables constant. PCs=0 (mean values), canopy cover = 50%
 new.dat.ralu <- data.frame(ralu_density = ralu.sites$ralu_density , 
-                           permanent = c(rep(0, 20),rep(1,20)),
+                           permanent = ralu.sites$permanent,
                            PC2 = rep(0, 40), PC1 = rep(0, 40),
                            canopy_cover = rep(50, 40), total = rep(10, 40) )
 pred.ralu.hydro <- predict.glm(ralu.prev.best2, newdata = new.dat.ralu, 
