@@ -69,7 +69,7 @@ mod.cor$estimate^2  # R squared = 0.375, slightly better
 # Explore marginal effects of ralu density and hydroperiod  -----------------#
 # keep other variables constant. PCs=0 (mean values), canopy cover = 50%
 new.dat.ralu <- data.frame(ralu_density = rep(seq(0, 0.4, length=30),2) , 
-                      permanent = factor(c(rep(0, 30),rep(1,30))),
+                      permanent = c(rep(0, 30),rep(1,30)),
                       PC2 = rep(0, 60), PC1 = rep(0, 60),
                       canopy_cover = rep(50, 60), total = rep(10, 60) )
 
