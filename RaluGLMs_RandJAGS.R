@@ -72,11 +72,8 @@ new.dat.ralu <- data.frame(ralu_density = rep(seq(0, 0.4, length=30),2) ,
                       permanent = c(rep(0, 30),rep(1,30)),
                       PC2 = rep(0, 60), PC1 = rep(0, 60),
                       canopy_cover = rep(50, 60), total = rep(10, 60) )
-
 pred.ralu.hydro <- predict.glm(ralu.prev.best2, newdata = new.dat.ralu, 
                                type = "response", se.fit = TRUE)
-
-
 # add predictions and se to dataframe
 new.dat.ralu$permanent <- factor(new.dat.ralu$permanent)
 new.dat.ralu$fit <- pred.ralu.hydro$fit
@@ -84,13 +81,34 @@ new.dat.ralu$se.fit <- pred.ralu.hydro$se.fit
 new.dat.ralu$CI.lwr <- pred.ralu.hydro$fit - pred.ralu.hydro$se.fit*1.96
 new.dat.ralu$CI.upr <- pred.ralu.hydro$fit + pred.ralu.hydro$se.fit*1.96
 
-
 ggplot(new.dat.ralu, aes(x = ralu_density, y = fit, color = permanent )) +
-  #geom_point() +
   geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
   geom_line( aes(y = fit)) +
   ylab("Predicted Prevalence") 
 
+
+
+# Again Explore marginal effects of ralu density and hydroperiod but with rug plots 
+# showing the distribution of the predictor data 
+# keep other variables constant. PCs=0 (mean values), canopy cover = 50%
+new.dat.ralu <- data.frame(ralu_density = ralu.sites$ralu_density , 
+                           permanent = c(rep(0, 20),rep(1,20)),
+                           PC2 = rep(0, 40), PC1 = rep(0, 40),
+                           canopy_cover = rep(50, 40), total = rep(10, 40) )
+pred.ralu.hydro <- predict.glm(ralu.prev.best2, newdata = new.dat.ralu, 
+                               type = "response", se.fit = TRUE)
+# add predictions and se to dataframe
+new.dat.ralu$permanent <- factor(new.dat.ralu$permanent)
+new.dat.ralu$fit <- pred.ralu.hydro$fit
+new.dat.ralu$se.fit <- pred.ralu.hydro$se.fit
+new.dat.ralu$CI.lwr <- pred.ralu.hydro$fit - pred.ralu.hydro$se.fit*1.96
+new.dat.ralu$CI.upr <- pred.ralu.hydro$fit + pred.ralu.hydro$se.fit*1.96
+
+ggplot(new.dat.ralu, aes(x = ralu_density, y = fit, color = permanent )) +
+  geom_rug(sides="b") +
+  geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
+  geom_line( aes(y = fit)) +
+  ylab("Predicted Prevalence") 
 
 
 
@@ -102,8 +120,6 @@ new.dat.canopy <- data.frame(ralu_density = rep(0.2, 60) ,
                            canopy_cover = rep(seq(0,100,length=30),2), total = rep(10, 60) )
 pred.canopy.hydro <- predict.glm(ralu.prev.best2, newdata = new.dat.canopy, 
                                type = "response", se.fit = TRUE)
-
-
 # add predictions and se to dataframe
 new.dat.canopy$permanent <- factor(new.dat.canopy$permanent)
 new.dat.canopy$fit <- pred.canopy.hydro$fit
@@ -111,9 +127,7 @@ new.dat.canopy$se.fit <- pred.canopy.hydro$se.fit
 new.dat.canopy$CI.lwr <- pred.canopy.hydro$fit - pred.canopy.hydro$se.fit*1.96
 new.dat.canopy$CI.upr <- pred.canopy.hydro$fit + pred.canopy.hydro$se.fit*1.96
 
-
 ggplot(new.dat.canopy, aes(x = canopy_cover, y = fit, color = permanent )) +
-  #geom_point() +
   geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
   geom_line( aes(y = fit)) +
   ylab("Predicted Prevalence") 
