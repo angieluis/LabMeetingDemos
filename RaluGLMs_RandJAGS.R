@@ -1,6 +1,6 @@
 library(tidyverse)
 
-# import data from csv file
+#, import data from csv file
 spp.sites <- read.csv("spp.sites.csv")
 
 ## pull out just the frog data and covariates we might want
@@ -49,75 +49,107 @@ pred <- inv.logit(pred.u)
 
 plot(pred, predict(ralu.prev.best2))
 plot(pred.u, predict(ralu.prev.best2)) ## Weird! The predict function doesn't back transform
- 
+
+# need to say predict(ralu.prev.best2, type="response") to get it to transform 
+
+
 # now that I know predict() doesn't back transform, redo R^2 calculation from before
 mod.cor <- cor.test(inv.logit(predict(ralu.prev.best2)), ralu.sites$prevalence)
 mod.cor$estimate^2  # R squared = 0.375, slightly better
 
 
+
+###############################################################################
+# 
+# Plot marginal effects and explore effect of beavers
+#
+###############################################################################
+
+
+# Explore marginal effects of ralu density and hydroperiod  -----------------#
+# keep other variables constant. PCs=0 (mean values), canopy cover = 50%
+new.dat.ralu <- data.frame(ralu_density = rep(seq(0, 0.4, length=30),2) , 
+                      permanent = factor(c(rep(0, 30),rep(1,30))),
+                      PC2 = rep(0, 60), PC1 = rep(0, 60),
+                      canopy_cover = rep(50, 60), total = rep(10, 60) )
+
+pred.ralu.hydro <- predict.glm(ralu.prev.best2, newdata = new.dat.ralu, 
+                               type = "response", se.fit = TRUE)
+
+
+# add predictions and se to dataframe
+new.dat.ralu$permanent <- factor(new.dat.ralu$permanent)
+new.dat.ralu$fit <- pred.ralu.hydro$fit
+new.dat.ralu$se.fit <- pred.ralu.hydro$se.fit
+new.dat.ralu$CI.lwr <- pred.ralu.hydro$fit - pred.ralu.hydro$se.fit*1.96
+new.dat.ralu$CI.upr <- pred.ralu.hydro$fit + pred.ralu.hydro$se.fit*1.96
+
+
+ggplot(new.dat.ralu, aes(x = ralu_density, y = fit, color = permanent )) +
+  #geom_point() +
+  geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
+  geom_line( aes(y = fit)) +
+  ylab("Predicted Prevalence") 
+
+
+
+
+# Explore marginal effects of canopy cover and hydroperiod  -----------------#
+# keep other variables constant. PCs=0 (mean values), ralu density = 0.2
+new.dat.canopy <- data.frame(ralu_density = rep(0.2, 60) , 
+                           permanent = c(rep(0, 30),rep(1,30)),
+                           PC2 = rep(0, 60), PC1 = rep(0, 60),
+                           canopy_cover = rep(seq(0,100,length=30),2), total = rep(10, 60) )
+pred.canopy.hydro <- predict.glm(ralu.prev.best2, newdata = new.dat.canopy, 
+                               type = "response", se.fit = TRUE)
+
+
+# add predictions and se to dataframe
+new.dat.canopy$permanent <- factor(new.dat.canopy$permanent)
+new.dat.canopy$fit <- pred.canopy.hydro$fit
+new.dat.canopy$se.fit <- pred.canopy.hydro$se.fit
+new.dat.canopy$CI.lwr <- pred.canopy.hydro$fit - pred.canopy.hydro$se.fit*1.96
+new.dat.canopy$CI.upr <- pred.canopy.hydro$fit + pred.canopy.hydro$se.fit*1.96
+
+
+ggplot(new.dat.canopy, aes(x = canopy_cover, y = fit, color = permanent )) +
+  #geom_point() +
+  geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
+  geom_line( aes(y = fit)) +
+  ylab("Predicted Prevalence") 
+
+
+
 ####################### Explore effect of beavers
 # Assume Beaver ponds are permanent and have canopy cover of 21 
 # & non-beaver ponds are not permanent and have canopy cover of 42
-# (Would probably be better to half the permanent coeficient, because about half are permanent)
-
-# assume PC1 and PC2 values of 0 (sort of average)
+# probably should make beaver ponds permanent or non-permanent in proportion to data
+# assume PC1 and PC2 values of 0 (average)
 # explore the effect of ralu_density
 
-frog.density <- seq(0, 0.4, length=30)
+# How do beavers affect prevalence?  ------------------------------------------#
+# keep other variables constant. PCs=0 (mean values), ralu density = 0.2
+new.dat.beaver <- data.frame(ralu_density = rep(seq(0, 0.4, length=30),2) , 
+                           permanent = rep(1, 60),
+                           PC2 = rep(0, 60), PC1 = rep(0, 60),
+                           canopy_cover = c(rep(21, 30), rep(42, 30)), total = rep(10, 60) )
+pred.beaver <- predict.glm(ralu.prev.best2, newdata = new.dat.beaver, 
+                                 type = "response", se.fit = TRUE)
 
-beav.pred1 <- coef['(Intercept)'] + 
-  coef['ralu_density'] * frog.density +
-  coef['permanent']  + 
-  #coef['PC2'] * ralu.sites$PC2 +  # assume average value of 0 
-  #coef['PC1'] * ralu.sites$PC1 +  # assume average value of 0 
-  coef['canopy_cover'] * 21
-
-beav.pred <- inv.logit(beav.pred1)
-
-nonbeav.pred1 <- coef['(Intercept)'] + 
-  coef['ralu_density'] * frog.density +
-  #coef['permanent']  +  # assume not permanent, so 0
-  #coef['PC2'] * ralu.sites$PC2 +  # assume average value of 0 
-  #coef['PC1'] * ralu.sites$PC1 +  # assume average value of 0 
-  coef['canopy_cover'] * 42
-
-nonbeav.pred <- inv.logit(nonbeav.pred1)
-
-plot(frog.density, beav.pred,type="l", col="steelblue",lwd=2, ylab="predicted prevalence",ylim=c(0,1))
-lines(frog.density, nonbeav.pred, col="olivedrab", lwd=2)
-legend("bottomright", c("beaver", "non-beaver"), lwd=2, col=c("steelblue","olivedrab"),bty="n")
+new.dat.beaver$beaver <- c(rep("beaver pond",30), rep("non-beaver pond",30))
+# add predictions and se to dataframe
+new.dat.beaver$permanent <- factor(new.dat.beaver$permanent)
+new.dat.beaver$fit <- pred.beaver$fit
+new.dat.beaver$se.fit <- pred.beaver$se.fit
+new.dat.beaver$CI.lwr <- pred.beaver$fit - pred.beaver$se.fit*1.96
+new.dat.beaver$CI.upr <- pred.beaver$fit + pred.beaver$se.fit*1.96
 
 
-#################### Add + - SE predictions
+ggplot(new.dat.beaver, aes(x = ralu_density, y = fit, color = beaver )) +
+  geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = beaver, color = NULL), alpha = .15) +
+  geom_line( aes(y = fit)) +
+  ylab("Predicted Prevalence") 
 
-beav.pred.high1 <- (coef['(Intercept)']+SE['(Intercept)']) + 
-  (coef['ralu_density']+SE['ralu_density']) * frog.density +
-  (coef['permanent']+SE['permanent'])  + 
-  (coef['canopy_cover']+SE['canopy_cover']) * 21
-beav.pred.high <- inv.logit(beav.pred.high1)
-
-beav.pred.low1 <- (coef['(Intercept)']-SE['(Intercept)']) + 
-  (coef['ralu_density']-SE['ralu_density']) * frog.density +
-  (coef['permanent']-SE['permanent'])  + 
-  (coef['canopy_cover']-SE['canopy_cover']) * 21
-beav.pred.low <- inv.logit(beav.pred.low1)
-
-nonbeav.pred.high1 <- (coef['(Intercept)']+SE['(Intercept)']) + 
-  (coef['ralu_density']+SE['ralu_density']) * frog.density +
-  (coef['canopy_cover']+SE['canopy_cover']) * 42
-nonbeav.pred.high <- inv.logit(nonbeav.pred.high1)
-
-nonbeav.pred.low1 <- (coef['(Intercept)']-SE['(Intercept)']) + 
-  (coef['ralu_density']-SE['ralu_density']) * frog.density +
-  (coef['canopy_cover']-SE['canopy_cover']) * 42
-nonbeav.pred.low <- inv.logit(nonbeav.pred.low1)
-
-
-
-lines(frog.density, beav.pred.high, lty=2, col="steelblue")
-lines(frog.density, beav.pred.low, lty=2, col="steelblue")
-lines(frog.density, nonbeav.pred.low, col="olivedrab",lty=2)
-lines(frog.density, nonbeav.pred.high, col="olivedrab",lty=2)
 
 
 
