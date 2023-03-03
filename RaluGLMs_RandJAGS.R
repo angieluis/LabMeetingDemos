@@ -48,13 +48,12 @@ inv.logit <- function(x){
 pred <- inv.logit(pred.u)
 
 plot(pred, predict(ralu.prev.best2))
-plot(pred.u, predict(ralu.prev.best2)) ## Weird! The predict function doesn't back transform
-
-# need to say predict(ralu.prev.best2, type="response") to get it to transform 
+plot(pred.u, predict(ralu.prev.best2)) ## Weird! The predict function doesn't back transform, automatically,
+# need to say predict(ralu.prev.best2, type="response") to get it to transform on scale of response variable 
 
 
 # now that I know predict() doesn't back transform, redo R^2 calculation from before
-mod.cor <- cor.test(inv.logit(predict(ralu.prev.best2)), ralu.sites$prevalence)
+mod.cor <- cor.test(predict(ralu.prev.best2, type="response"), ralu.sites$prevalence)
 mod.cor$estimate^2  # R squared = 0.375, slightly better
 
 
@@ -132,6 +131,53 @@ ggplot(new.dat.canopy, aes(x = canopy_cover, y = fit, color = permanent )) +
   geom_line( aes(y = fit)) +
   ylab("Predicted Prevalence") 
 
+
+
+
+# Explore marginal effects of PC1 and hydroperiod but with rug plots 
+# showing the distribution of the predictor data. Use actual data for those
+# variables and keep other variables constant. PCs=0 (mean values), canopy cover = 50%
+new.dat.PC1 <- data.frame(ralu_density = rep(0.2, 40) , 
+                          permanent = ralu.sites$permanent,
+                          PC2 = rep(0, 40), PC1 = ralu.sites$PC1 ,
+                          canopy_cover = rep(50, 40), total = rep(10, 40) )
+pred.PC1 <- predict.glm(ralu.prev.best2, newdata = new.dat.PC1, 
+                        type = "response", se.fit = TRUE)
+# add predictions and se to dataframe
+new.dat.PC1$permanent <- factor(new.dat.PC1$permanent)
+new.dat.PC1$fit <- pred.PC1$fit
+new.dat.PC1$se.fit <- pred.PC1$se.fit
+new.dat.PC1$CI.lwr <- pred.PC1$fit - pred.PC1$se.fit*1.96
+new.dat.PC1$CI.upr <- pred.PC1$fit + pred.PC1$se.fit*1.96
+
+ggplot(new.dat.PC1, aes(x = PC1, y = fit, color = permanent )) +
+  geom_rug(sides="b") +
+  geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
+  geom_line( aes(y = fit)) +
+  ylab("Predicted Prevalence") 
+
+
+# Explore marginal effects of PC2 and hydroperiod but with rug plots 
+# showing the distribution of the predictor data. Use actual data for those
+# variables and keep other variables constant. PCs=0 (mean values), canopy cover = 50%
+new.dat.PC2 <- data.frame(ralu_density = rep(0.2, 40) , 
+                          permanent = ralu.sites$permanent,
+                          PC1 = rep(0, 40), PC2 = ralu.sites$PC2 ,
+                          canopy_cover = rep(50, 40), total = rep(10, 40) )
+pred.PC2 <- predict.glm(ralu.prev.best2, newdata = new.dat.PC2, 
+                        type = "response", se.fit = TRUE)
+# add predictions and se to dataframe
+new.dat.PC2$permanent <- factor(new.dat.PC2$permanent)
+new.dat.PC2$fit <- pred.PC2$fit
+new.dat.PC2$se.fit <- pred.PC2$se.fit
+new.dat.PC2$CI.lwr <- pred.PC2$fit - pred.PC2$se.fit*1.96
+new.dat.PC2$CI.upr <- pred.PC2$fit + pred.PC2$se.fit*1.96
+
+ggplot(new.dat.PC2, aes(x = PC2, y = fit, color = permanent )) +
+  geom_rug(sides="b") +
+  geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
+  geom_line( aes(y = fit)) +
+  ylab("Predicted Prevalence") 
 
 
 ####################### Explore effect of beavers
