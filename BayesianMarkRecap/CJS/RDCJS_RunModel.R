@@ -30,9 +30,12 @@ f <- apply(CH.primary, 1, get.first)
 #delete individuals that were caught for the first time at the last primary occasion
 # they don't provide data and mess with code
 rms <- which(f==dim(CH.primary)[2])
-CH.secondary <- CH.secondary[-rms, , ]
-CH.primary <- CH.primary[-rms, ]
-f <- f[-rms]
+if(length(rms)>0){
+  CH.secondary <- CH.secondary[-rms, , ]
+  CH.primary <- CH.primary[-rms, ]
+  f <- f[-rms]
+  individual.covariates <- individual.covariates[-rms,]
+}
 
 # create a separate f in terms of months captured (not full months)
 f.prim <- temporal.covariates$Prim[f]

@@ -1,13 +1,37 @@
 
 library(tidyverse)
 
-CJS.RDcapture.history.list.fun <- function(
+
+## Logit function ----------------------------------------------------------- ##
+
+
+logit <- function(x) {
+  log(x / (1 - x))
+}
+
+
+# Reverse logit funciton ---------------------------------------------------- ##
+
+
+rev.logit <- function(x) {
+  exp(x) / (1 + exp(x))
+}
+
+
+
+
+# Mulitstate robust design capture history function ------------------------- ##
+
+MS.RDcapture.history.list.fun <- function(
   # assuming this dirty data has all the dates 
   # including those trapped but no animals/pema were caught
   dirty.data = NULL, # or if not all dates are in the clean data : southwest.dirty, 
   cleaned.data = southwest.final.clean, # 'cleaned'
   site.webs = "GrandCanyon.E", # chracter string with site and web pasted together with a period 
-  species = "PM") {
+  species = "PM",
+  SNV.afterpos =FALSE, # change the few negatives that come after a positive to a positive. return which ones changed
+  SNV.unknown.state=FALSE # if want -9 for SNV it's own state ("3"), otherwise assume unknowns are SNV negative ("1")
+) {
   
   ## function returns a list of monthly matrices
   ## first matrix represents the first month of trapping
@@ -139,10 +163,31 @@ CJS.RDcapture.history.list.fun <- function(
       for (d in 1:length(days)) {
         for (i in 1:length(web.IDs)) {
           indiv <- which(rownames(Ch.list[[1]]) == web.IDs[i])
-          id.dat <- web.dat[which(web.dat$date == days[d] & web.dat$site.tag == web.IDs[i]), ]
-          Ch.list[[session]][indiv, d] <- ifelse(dim(id.dat)[1] > 0, 1, 0)
-        } # i
-      } # d
+          id.day.dat <- web.dat[which(web.dat$date == days[d] & web.dat$site.tag == web.IDs[i]), ]
+          id.session.dat <- web.dat[which(web.dat$session == names(Session.days)[m] & web.dat$site.tag == web.IDs[i]), ]
+          
+          if(dim(id.day.dat)[1] == 0){ # if animal wasn't caught that day
+            Ch.list[[session]][indiv, d] <- 0        # put in a 0
+          } else{                 # if was caught, check serostatus for all days in that primary period, and put in that status
+            status <- id.session.dat$snv_adj
+            
+            Ch.list[[session]][indiv, d] <- ifelse(length(which(status==1))>0,2,ifelse(length(which(status==0))>0,1,ifelse(SNV.unknown.state==TRUE,3,1))) # if any of the days are recorded as positive, make is positive ("2"), if any of the days are recorded as negative, make negative ("1"), otherwise make unknown SNV it's own state ("3") (or default to negative if SNV.unknown.state==FALSE)                                                               
+            
+            
+            if(SNV.afterpos==TRUE){ # change the negatives that come after a positive to a positive, and return message
+              chobs <- unique(Ch.list[[session]][indiv,d])
+              if(chobs==1){  # if negative
+                if(any(unlist(lapply(Ch.list, function(x){any(x[indiv,]==2)}))==1,na.rm=TRUE)){ #if positive any previous month
+                  # if so, change to positive
+                  Ch.list[[session]][indiv,d] <- 2
+                  cat("changed ID",indiv,"session",session,"from SNV negative after positive to positive","\n")  
+                }   
+              }
+            } #if afterpos==TRUE 
+            
+          } # if caught
+        } #i
+      } #d
       cat("web = ", w, "; session = ", m, "\n")
     } # m
   } # w
@@ -155,27 +200,12 @@ CJS.RDcapture.history.list.fun <- function(
 
 ## Create a primary monthly ch from a secondary list ------------------------ ##
 
-# CJS
-primary.ch.fun <- function(CH.secondary) { # as list of monthly matrices
-  CH.primary <- matrix(NA, 
-                       nrow = dim(CH.secondary[[1]])[1], 
-                       ncol = length(CH.secondary))
-  for (i in 1:dim(CH.primary)[2]) {
-    CH.primary[, i] <- apply(CH.secondary[[i]], 1, function(x) {
-      ifelse(length(which(is.na(x))) == length(x), NA, sum(x, na.rm = TRUE))
-    })
-  }
-  CH.primary <- replace(CH.primary, CH.primary > 1, 1)
-  return(CH.primary)
-}
-
-
 # Multistate 
-primary.MSch.fun <- function(CH.secondary){ # as list of monthly matrices 
-  CH.primary <- matrix(NA,nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary))
-  for(m in 1:length(CH.secondary)){
-    for(i in 1:dim(CH.secondary[[1]])[1]){
-      chs <- CH.secondary[[m]][i,]
+primary.MSch.array.fun <- function(CH.secondary){ # as list of monthly matrices 
+  CH.primary <- matrix(NA,nrow=dim(CH.secondary)[1], ncol=dim(CH.secondary)[3])
+  for(m in 1:dim(CH.secondary)[3]){
+    for(i in 1:dim(CH.secondary)[1]){
+      chs <- CH.secondary[i, ,m]
       if(length(which(is.na(chs))) == length(chs)){
         CH.primary[i,m] <- NA
       } else{
@@ -189,6 +219,20 @@ primary.MSch.fun <- function(CH.secondary){ # as list of monthly matrices
 }
  
 
+
+# not multistate - function to create primary CH from secondary list
+primary.ch.fun <- function(CH.secondary) { # as list of monthly matrices
+  CH.primary <- matrix(NA, 
+                       nrow = dim(CH.secondary[[1]])[1], 
+                       ncol = length(CH.secondary))
+  for (i in 1:dim(CH.primary)[2]) {
+    CH.primary[, i] <- apply(CH.secondary[[i]], 1, function(x) {
+      ifelse(length(which(is.na(x))) == length(x), NA, sum(x, na.rm = TRUE))
+    })
+  }
+  CH.primary <- replace(CH.primary, CH.primary > 1, 1)
+  return(CH.primary)
+}
 
 
 
@@ -220,7 +264,7 @@ monthly.covariate.fun <- function(
   # sites and all temporal data with no time lags
   temporal.data = NULL, # sw.temp.data
   
-  multistate = FALSE, # if multistate model, 
+  multistate = TRUE, # if multistate model, 
   # need state at first capture
   
   
@@ -442,35 +486,58 @@ list.to.array.fun <- function(Ch.list, #as list
 
 
 
+## function for initial values for z ---------------------------------------- ##
 
-## Function to create matrix with info about known latent state z ----------- ##
-known.state.cjs=function(ch){
-  state=ch
+MSinf.init.z <-  function(ch, #primary CH
+                          n.months){ # n.months is the length of months in the dataset by individual because can differ by web [i,m] . I think assumes that all sites start at the same time?
+  kn.state <- known.state.SImsInf(ms = ch)
+  f <- apply(ch,1,function(x){min(which(x > 0))})
+  state <- matrix(NA, nrow = dim(ch)[1], ncol = dim(ch)[2]) 
+  # fill in with first state caught
   for(i in 1:dim(ch)[1]){
-    n1=min(which(ch[i,]==1))
-    n2=max(which(ch[i,]==1))
-    state[i,n1:n2]=1
-    state[i,n1]=NA			#only filling in those that were 0s but we know were alive because caught before and after
+    f.state <- ch[i,f[i]]
+    state[i,] <- rep(f.state,dim(ch)[2]) 
   }
-  state[state==0]=NA
+  # remove those that are in the known state
+  state <- replace(state,!is.na(kn.state),NA)
+  
+  for(i in 1:(dim(state)[1])){
+    state[i,1:f[i]] <- NA # put NA for when first caught (in likelihood)
+    
+    if(length(which(kn.state[i,] == 2)) > 0){ 
+      maxI <- max(which(kn.state[i,] == 2))
+      if(maxI < dim(state)[2] ){
+        state[i, (maxI + 1):dim(state)[2]] <- 2 # all after caught as I are I (2)
+      }
+    }
+    if(n.months[i]!=max(n.months)){
+      state[i,(n.months[i]+1):dim(ch)[2]] <- NA # replace all after last month in the dataset with NA
+    }
+  }
   return(state)
 }
 
 
 
-## Function to create matrix of initial values for latent state z ----------- ##
-# we shouldn't give initial values for those elements of z whose value is specified in the data.
-# they get an NA
-cjs.init.z <- function(ch,f,prim.occasions){
-  ch <- replace(ch,is.na(ch),0)
-  for(i in 1:dim(ch)[1]){
-    if(sum(ch[i,],na.rm=TRUE)==1) next
-    n2=max(which(ch[i,]==1))
-    ch[i,f[i]:n2]=NA
+## function for known states for z ----------------------------------------- ##
+
+known.state.SImsInf <- function(ms){ # ms is multistate primary capture history
+  # notseen: label for 'not seen' #here is 3
+  state <- ms
+  state[state == 0] <- NA
+  for(i in 1:dim(ms)[1]){
+    n1 <- min(which(ms[i,]>0))
+    if(length(which(ms[i, ] == 2)) > 0){ #filling in I's where can
+      minI <- min(which(ms[i, ] == 2)) #I's are observation 2
+      maxI <- max(which(ms[i, ] == 2))
+      state[i, minI:maxI] <- 2}         # I's are state 3
+    if(length(which(ms[i, ] == 1)) > 0){  #filling in S's where can
+      minS <- min(which(ms[i, ] == 1))  # S's are observation 1
+      maxS <- max(which(ms[i, ] == 1))
+      state[i, minS:maxS] <- 1}         # S's are state 2
+    state[i,n1] <- NA
   }
-  for(i in 1:dim(ch)[1]){
-    ch[i,1:f[i]]=NA
-  }
-  return(ch)	
+  
+  return(state)
 }
 

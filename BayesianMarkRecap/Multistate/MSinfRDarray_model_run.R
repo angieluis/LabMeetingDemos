@@ -30,10 +30,11 @@
    #delete individuals that were caught for the first time at the last primary occasion
    # they don't provide data and mess with code
    rms <- which(f==dim(CH.primary)[2])
-   CH.secondary <- CH.secondary[-rms, , ]
-   CH.primary <- CH.primary[-rms, ]
-   
-   f <- f[-rms]
+   if(length(rms)>0){
+     CH.secondary <- CH.secondary[-rms, , ]
+     CH.primary <- CH.primary[-rms, ]
+     f <- f[-rms]
+   }
    f.state <- numeric()
    for(i in 1:dim(CH.primary)[1]){
      f.state[i] <- CH.primary[i,f[i]]
@@ -43,56 +44,7 @@
    Prim <- match(1:n.months, prim.occasions)
    f.prim <- Prim[f]
    
-## functions for known state and initial values for z ----------------------- ##
-   MSinf.init.z <-  function(ch, #primary CH
-            n.months){ # n.months is the length of months in the dataset by individual because can differ by web [i,m] . I think assumes that all sites start at the same time?
-     kn.state <- known.state.SImsInf(ms = ch)
-     f <- apply(ch,1,function(x){min(which(x > 0))})
-     state <- matrix(NA, nrow = dim(ch)[1], ncol = dim(ch)[2]) 
-     # fill in with first state caught
-     for(i in 1:dim(ch)[1]){
-       f.state <- ch[i,f[i]]
-       state[i,] <- rep(f.state,dim(ch)[2]) 
-     }
-     # remove those that are in the known state
-     state <- replace(state,!is.na(kn.state),NA)
-     
-     for(i in 1:(dim(state)[1])){
-       state[i,1:f[i]] <- NA # put NA for when first caught (in likelihood)
-       
-       if(length(which(kn.state[i,] == 2)) > 0){ 
-         maxI <- max(which(kn.state[i,] == 2))
-         if(maxI < dim(state)[2] ){
-           state[i, (maxI + 1):dim(state)[2]] <- 2 # all after caught as I are I (2)
-         }
-       }
-       if(n.months[i]!=max(n.months)){
-         state[i,(n.months[i]+1):dim(ch)[2]] <- NA # replace all after last month in the dataset with NA
-       }
-     }
-     return(state)
-   }
-     
-   known.state.SImsInf <- function(ms){ # ms is multistate primary capture history
-     # notseen: label for 'not seen' #here is 3
-     state <- ms
-     state[state == 0] <- NA
-     for(i in 1:dim(ms)[1]){
-       n1 <- min(which(ms[i,]>0))
-       if(length(which(ms[i, ] == 2)) > 0){ #filling in I's where can
-         minI <- min(which(ms[i, ] == 2)) #I's are observation 2
-         maxI <- max(which(ms[i, ] == 2))
-         state[i, minI:maxI] <- 2}         # I's are state 3
-       if(length(which(ms[i, ] == 1)) > 0){  #filling in S's where can
-         minS <- min(which(ms[i, ] == 1))  # S's are observation 1
-         maxS <- max(which(ms[i, ] == 1))
-         state[i, minS:maxS] <- 1}         # S's are state 2
-       state[i,n1] <- NA
-     }
-     
-     return(state)
-   }
-   
+
 ## Bundle data -------------------------------------------------------------- ##
 
 
@@ -157,7 +109,7 @@
                     )
 
 
-## Model specification ------------------------------------------------------ ##
+## Run the Mdodel --------------------------------------------------------- ##
 
 
  # date before run  

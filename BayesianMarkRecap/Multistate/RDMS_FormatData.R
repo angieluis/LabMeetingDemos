@@ -7,13 +7,13 @@
 
 
 ## Source file with functions for formatting data
-source("RDCJS_Functions.R")
+source("RDMS_Functions.R")
 
 ## Load in  your cleaned data (and dirty if there are dates not in cleaned dataset)
 load("AllCaptureData.RData") # or your cleaned capture data 
 
 ## Create a list of monthly matrices 
-grandcanyonT.CH.list <- CJS.RDcapture.history.list.fun(
+grandcanyonT.CH.list <- MS.RDcapture.history.list.fun(
   cleaned.data = southwest.final.clean, # 'cleaned' e.g. captures with no tag numbers removed - formatted
   site.webs = "GrandCanyon.T", # your data need a site column and web column and here it is pasted together
   species = "PM",
@@ -43,7 +43,8 @@ covariate.data <- monthly.covariate.fun(cleaned.data = southwest.final.clean,
                       CH.secondary = Ch.list,
                       tags = rownames(Ch.list[[1]]),
                       sessions = sessions,
-                      site.webs = "Grandcanyon.T")
+                      site.webs = "Grandcanyon.T",
+                      multistate = TRUE)
 
 individual.covariates <- covariate.data$individual.covariates
 temporal.covariates <- covariate.data$temporal.covariates
@@ -54,4 +55,4 @@ n.months <- max(months.trapped) #months spanned
 # reformat CH from list to array
 CH.secondary <- list.to.array.fun(Ch.list, temporal.covariates)
 
-save(CH.secondary, individual.covariates, temporal.covariates, months.trapped, file="formattedCHdata.RData")
+save(Ch.list, CH.secondary, individual.covariates, temporal.covariates, months.trapped, file="formattedCHdata.RData")

@@ -9,7 +9,7 @@ library(tidyverse)
 # so use covariate data for those sites for the first nmonths
 
 #source("01_sw_data_functions_more.R")
-sw.temp <- read.csv("southwest_covariates_norm.csv")
+sw.temp <- read.csv("updated_southwest_covariates.csv") # "southwest_covariates_norm.csv")
 sw.temp$date2 <- lubridate::dmy(paste("1", sw.temp$date))
 sw.temp$site.web <- paste(sw.temp$site,sw.temp$web,sep=".")
 # add season covariate 0=winter
@@ -34,13 +34,6 @@ n.sec.occ <- c(rep(3,4), 0, rep(3,5), 4, rep(3,29)) # all but month 11 have 3 da
 start.date <- sw.temp$date2[20] # Aug 1994
 end.date <- start.date + months(n.months-1)
 n.webs <- length(ninds)
-maxI <- 20 # to standardize I.dat so beta not so small
-#prim.dates <- seq(start.date,end.date,by="month")
-
-sessions <- character()
-for(i in 1:length(prim.dates)){
-  sessions[i] <- ifelse(month(prim.dates[i])<10 ,paste(year(prim.dates[i]),"0",month(prim.dates[i]),sep=""),paste(year(prim.dates[i]),month(prim.dates[i]),sep=""))
-}
 
 
 ### set parameter values
