@@ -83,7 +83,9 @@ new.dat.ralu$CI.upr <- pred.ralu.hydro$fit + pred.ralu.hydro$se.fit*1.96
 ggplot(new.dat.ralu, aes(x = ralu_density, y = fit, color = permanent )) +
   geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
   geom_line( aes(y = fit)) +
+  ylim(c(0,1)) +
   ylab("Predicted Prevalence") 
+  
 
 
 
@@ -107,6 +109,7 @@ ggplot(new.dat.ralu, aes(x = ralu_density, y = fit, color = permanent )) +
   geom_rug(sides="b") +
   geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
   geom_line( aes(y = fit)) +
+  ylim(c(0,1)) +
   ylab("Predicted Prevalence") 
 
 
@@ -129,6 +132,7 @@ new.dat.canopy$CI.upr <- pred.canopy.hydro$fit + pred.canopy.hydro$se.fit*1.96
 ggplot(new.dat.canopy, aes(x = canopy_cover, y = fit, color = permanent )) +
   geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = permanent, color = NULL), alpha = .15) +
   geom_line( aes(y = fit)) +
+  ylim(c(0,1)) +
   ylab("Predicted Prevalence") 
 
 
@@ -208,6 +212,7 @@ new.dat.beaver$CI.upr <- pred.beaver$fit + pred.beaver$se.fit*1.96
 ggplot(new.dat.beaver, aes(x = ralu_density, y = fit, color = beaver )) +
   geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = beaver, color = NULL), alpha = .15) +
   geom_line( aes(y = fit)) +
+  ylim(c(0,1)) +
   ylab("Predicted Prevalence") 
 
 
