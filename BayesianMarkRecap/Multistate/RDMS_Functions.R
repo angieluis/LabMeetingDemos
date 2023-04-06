@@ -218,6 +218,23 @@ primary.MSch.array.fun <- function(CH.secondary){ # as list of monthly matrices
   return(CH.primary)
 }
  
+# from list format
+primary.MSch.fun <- function(CH.secondary){ # as list of monthly matrices 
+  CH.primary <- matrix(NA,nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary))
+  for(m in 1:length(CH.secondary)){
+    for(i in 1:dim(CH.secondary[[1]])[1]){
+      chs <- CH.secondary[[m]][i,]
+      if(length(which(is.na(chs))) == length(chs)){
+        CH.primary[i,m] <- NA
+      } else{
+        chs <- chs[is.finite(chs)]
+        CH.primary[i,m] <- ifelse(sum(chs) == 0, 0, unique(chs[which(chs > 0)]))
+      } 
+    }
+  }                     
+  
+  return(CH.primary)
+}
 
 
 # not multistate - function to create primary CH from secondary list

@@ -18,7 +18,7 @@ source("MSinfRDarray_model_specification2.R") # create a separate file with mode
 n.months <- max(months.trapped)
 
 # make a version not robust design for the known state and initial value functions
-CH.primary <- primary.MSch.array.fun(Ch.list)  
+CH.primary <- primary.MSch.array.fun(CH.secondary)  
 
 # create a vector of first marking
 get.first <- function(x) min(which(x!=0))
@@ -43,8 +43,12 @@ n.sec.occasions <- apply(CH.secondary, 3, function(x){
    sum(length(which(is.finite(x[1,]))))
 })
 
+# These models need a 3 for not seen instead of 0
+CH.secondary3 <- replace(CH.secondary, CH.secondary==0, 3)
+
+
 ##### Bundle data
-bugs.data=list(y = CH.secondary,
+bugs.data=list(y = CH.secondary3,
                f = f,
                f.prim = f.prim,
                f.state = individual.covariates$f.state,
@@ -64,7 +68,7 @@ bugs.data=list(y = CH.secondary,
 # supply initial values
 inits <- function() {
   list(
-    z                  = MSinf.init.z(CH.primary,rep(n.primary.occasions,nind)),
+    z                  = MSinf.init.z(CH.primary,rep(n.months,bugs.data$nind)),
     alpha.0            = runif(1, 0, 1), 
     alpha.season       = runif(3, 0, 1), 
     alpha.inf          = runif(1, 0, 1),
@@ -98,9 +102,9 @@ parameters <- c("alpha.0",
 
 
 #MCMCsettings  # set to low numbers for de-bugging - set higher for model run
-ni=10
-nt=1
-nb=2
+ni=10000
+nt=6
+nb=3000
 nc=3
 
 
@@ -116,10 +120,6 @@ robust.MSinf=jags(bugs.data,
                 n.iter=ni,
                 n.burnin=nb)
 date() # to tell how long it ran
-
-# Error in jags.model(model.file, data = data, inits = init.values, n.chains = n.chains,  : 
-#                       Error in node y[8,1,31]
-#                     Node inconsistent with parents
 
 
 save(robust.MSinf, file="ModelOutput.RData")
