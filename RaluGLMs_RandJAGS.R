@@ -194,7 +194,7 @@ ggplot(new.dat.PC2, aes(x = PC2, y = fit, color = permanent )) +
 # How do beavers affect prevalence?  ------------------------------------------#
 # keep other variables constant. PCs=0 (mean values), ralu density = 0.2
 new.dat.beaver <- data.frame(ralu_density = rep(seq(0, 0.4, length=30),2) , 
-                           permanent = rep(1, 60),
+                           permanent = c(rep(1, 30), rep(0,30)),
                            PC2 = rep(0, 60), PC1 = rep(0, 60),
                            canopy_cover = c(rep(21, 30), rep(42, 30)), total = rep(10, 60) )
 pred.beaver <- predict.glm(ralu.prev.best2, newdata = new.dat.beaver, 
@@ -380,5 +380,58 @@ ggplot(ralu1comparison, aes(x=type, y= prevalence)) +
   ylab("Posterior Predicted Prevalence")
   
   
-  
+###################################################################
+#That assumed one mean density of frogs, not look at frogs on x-axis
+
+ralu_density = seq(0, 0.4, length=20)
+
+beav.pred.frog.post <- matrix(NA , nrow=length(beta.0.post), ncol=length(ralu_density))
+for(i in 1:length(ralu_density)){
+  beav.pred.frog.post[ ,i] <- beta.0.post + 
+    beta.ralu.post * ralu_density[i] +
+    beta.permanent.post + 
+    beta.canopy.post * 0.21
+}
+
+beav.pred.frog.post <- inv.logit(beav.pred.frog.post)
+summary.beav.pred.frog.post <- apply(beav.pred.frog.post, 2, function(x){quantile(x, c(0.05,0.5,0.975))})
+
+
+### Predict prevalence in non-beaver ponds (assuming they are not permanent)
+nonbeav.pred.frog.post <- matrix(NA , nrow=length(beta.0.post), ncol=length(ralu_density))
+for(i in 1:length(ralu_density)){
+  nonbeav.pred.frog.post[,i] <- beta.0.post + 
+  beta.ralu.post * ralu_density[i] +
+  # assume not permanent, so 0
+  beta.canopy.post * 0.42
+}
+nonbeav.pred.frog.post <- inv.logit(nonbeav.pred.frog.post)
+summary.nonbeav.pred.frog.post <- apply(nonbeav.pred.frog.post, 2, function(x){quantile(x, c(0.05,0.5,0.975))})
+
+
+
+new.dat.beaver <- data.frame(beaver = c(rep("beaver pond",20), rep("non-beaver pond",20)),
+  permanent = c(rep(1,20), rep(0,20)),
+  ralu_density = rep(ralu_density,2),
+  mean = c(summary.beav.pred.frog.post[2,],summary.nonbeav.pred.frog.post[2,]),
+  CI.lwr = c(summary.beav.pred.frog.post[1,],summary.nonbeav.pred.frog.post[1,]),
+  CI.upr = c(summary.beav.pred.frog.post[3,], summary.nonbeav.pred.frog.post[3,]))
+
+
+ggplot(new.dat.beaver, aes(x = ralu_density, y = mean, color = beaver )) +
+  geom_ribbon( aes(ymin = CI.lwr, ymax = CI.upr, fill = beaver, color = NULL), alpha = .15) +
+  geom_line( aes(y = mean)) +
+  ylim(c(0,1)) +
+  ylab("Predicted Prevalence") 
+
+
+plot(ralu_density,summary.beav.pred.frog.post[2,] ,ylim=c(0,1),col="red",type="l",lwd=2,
+     ylab="Predictied Prevalence")
+lines(ralu_density,summary.beav.pred.frog.post[1,], col="red",lty=2)
+lines(ralu_density,summary.beav.pred.frog.post[3,], col="red",lty=2)
+lines(ralu_density,summary.nonbeav.pred.frog.post[2,], col="blue",lwd=2)
+lines(ralu_density,summary.nonbeav.pred.frog.post[1,], col="blue",lty=2)
+lines(ralu_density,summary.nonbeav.pred.frog.post[3,], col="blue",lty=2)
+legend("bottomright",c("beaver","non=beaver"),col=c("red","blue"),lwd=2,bty="n")
+
   
