@@ -1,3 +1,3 @@
 # LabMeetingDemos
 
-Various R demos for common issues. Any data files references in the R code are available in the lab Moodle page.
+Various R demos. Any data files referenced in the R code (like .csv or .RData) are available on the lab Moodle page.
